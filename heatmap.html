@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<script src='../lib/d3.v3.min.js'></script>
+	</head>
+	<style>
+	.axis path,
+	.axis line {
+	    fill: none;
+	    stroke: none;
+	    shape-rendering: crispEdges;
+	}
+	.axis text {
+	    font-family: sans-serif;
+	    font-size: 11px;
+	}
+
+	text {
+  		fill: #000;
+  		font: 12px sans-serif;
+  		pointer-events: none;
+	}
+	.select {
+	    position: absolute;
+	    width: 100px;
+	    top: 70px;
+	    left: 480px;
+	}
+
+	h1 {
+		position: absolute;
+		top: 10px;
+		left: 250px;
+	}
+
+	</style>
+
+	<body>
+		
+		<h1>Game of Thrones Housewise Appearances</h1>
+		
+		<script>
+
+			var season1 = [];
+			var season2 = [];
+			var season3 = [];
+			var season4 = [];
+			var season5 = [];
+			var season6 = [];
+
+			d3.csv("heatmap.csv", function(data){
+
+				
+				data.forEach(function(d) {
+					d.Baratheon = +d.Baratheon;
+					d.Greyjoy = +d.Greyjoy;
+					d.Lannister = +d.Lannister;
+					d.Stark = +d.Stark;
+					d.Targaryen = +d.Targaryen;
+					d.Tyrell = +d.Tyrell;
+					d.season = +d.season;
+					d.episode = +d.episode;
+
+					if (d.season == 1) {
+						season1.push([d.Baratheon,d.Greyjoy,d.Lannister,d.Stark,d.Targaryen,d.Tyrell,d.episode]);
+					}
+					if (d.season == 2) {
+						season2.push([d.Baratheon,d.Greyjoy,d.Lannister,d.Stark,d.Targaryen,d.Tyrell,d.episode]);
+					}
+					if (d.season == 3) {
+						season3.push([d.Baratheon,d.Greyjoy,d.Lannister,d.Stark,d.Targaryen,d.Tyrell,d.episode]);
+					}
+					if (d.season == 4) {
+						season4.push([d.Baratheon,d.Greyjoy,d.Lannister,d.Stark,d.Targaryen,d.Tyrell,d.episode]);
+					}
+					if (d.season == 5) {
+						season5.push([d.Baratheon,d.Greyjoy,d.Lannister,d.Stark,d.Targaryen,d.Tyrell,d.episode]);
+					}
+					if (d.season == 6) {
+						season6.push([d.Baratheon,d.Greyjoy,d.Lannister,d.Stark,d.Targaryen,d.Tyrell,d.episode]);
+					}
+				})				
+				
+
+				var padding = 100;
+
+				var w = 1100;
+				var h = 700;
+
+				var menu = ["Season 1", "Season 2", "Season 3", "Season 4", "Season 5", "Season 6"];	
+				
+				var choose = d3.select("body").append("select").attr("class","select").on("change", onUpdate);	
+
+				var menu_options = choose.selectAll("option").data(menu).enter().append("option").text(function (d) { return d;}); 
+
+				var canvas = d3.select("body")
+									   .append("svg")
+							           .attr("width",w)
+							           .attr("height",h)
+							          .append("g");	
+
+				drawChart(season1);	          
+
+				function onUpdate() {
+					
+					option_selected = d3.select("select").property("value");
+
+					if (option_selected === "Season 1"){
+						drawChart(season1);
+					}
+					if (option_selected === "Season 2"){
+						drawChart(season2);
+					}
+					if (option_selected === "Season 3"){
+						drawChart(season3);
+					}
+					if (option_selected === "Season 4"){
+						drawChart(season4);
+					}
+					if (option_selected === "Season 5"){
+						drawChart(season5);
+					}
+					if (option_selected === "Season 6"){
+						drawChart(season6);
+					}
+				}
+		          
+				function drawChart(season) {
+
+					d3.selectAll("svg").remove();
+
+					var canvas = d3.select("body")
+					   			   .append("svg")
+						           .attr("width",w)
+						           .attr("height",h)
+						          .append("g");	
+
+		        	var x = d3.scale.linear().range([padding,w-padding]),
+		          	    y = d3.scale.linear().range([h-padding,padding]),
+		          	    z = d3.scale.quantize().range(["#ffffd9","#edf8b1","#c7e9b4","#7fcdbb","#41b6c4","#1d91c0","#225ea8","#253494","#081d58"]);
+
+		          	var xStep = 1,
+		          	    yStep = 1;
+
+				
+					x.domain([1,d3.max(season,function(d,i,j){ return d3.max([season[i][6]]);})]);
+					y.domain([0,5]);
+					z.domain([0,d3.max(season,function(d,i,j){ return d3.max([season[i][0],season[i][1],season[i][2],season[i][3],season[i][4],season[i][5]]);})]);
+
+					console.log(season);
+ 
+					x.domain([x.domain()[0], +x.domain()[1] + xStep]);
+					y.domain([y.domain()[0], +y.domain()[1] + yStep]);
+
+					var tiles = canvas.selectAll("g")
+					  .data(season)
+					  .enter()
+					  .append("g")
+					  .selectAll(".tile")
+					  .data(function(d,i,j) {return [d[0],d[1],d[2],d[3],d[4],d[5]];})
+					  .enter()
+					  .append("rect")
+					  .attr("class", "tile")
+					  .attr("x", function(d,j,i) {return x(season[i][6]);})
+					  .attr("y", function(d,j,i) {return y((5 - j) + yStep);})
+					  .attr("rx", 10)
+					  .attr("ry", 10)
+					  .attr("width", x(xStep) - x(0))
+					  .attr("height", y(0) - y(yStep))
+					  .style("fill", function(d,j,i) {return z(season[i][j]);});
+
+					var xAxis = d3.svg.axis()
+									  .scale(x)
+					      			  .orient("bottom")
+					      			  .tickValues(["1","2","3","4","5","6","7","8","9","10"])
+					      			  .tickFormat(function(d,i) {return d;})
+				      			
+
+					var yAxis = d3.svg.axis()
+						   			  .scale(y)
+					   			   	  .orient("left")
+					   			   	  .tickValues([1,2,3,4,5,6])
+					   			   	  .tickFormat(function(d,i) {
+
+					   			   	  	if (i == 5) {
+					   			   	  		return "Baratheon";
+					   			   	  	}
+					   			   	  	if (i == 4) {
+					   			   	  		return "Greyjoy";
+					   			   	  	}
+					   			   	  	if (i == 3){
+					   			   	  		return "Lannister";
+					   			   	  	}
+					   			   	  	if (i == 2) {
+					   			   	  		return "Stark";
+					   			   	  	}
+					   			   	  	if (i == 1) {
+					   			   	  		return "Targaryen";
+					   			   	  	}
+					   			   	  	if (i == 0) {
+					   			   	  		return "Tyrell";
+					   			   	  	}
+
+					   			   	  });
+
+
+					var legend = canvas.selectAll(".legend")
+									   .data([z.invertExtent("#ffffd9")[0],z.invertExtent("#edf8b1")[0],z.invertExtent("#c7e9b4")[0],z.invertExtent("#7fcdbb")[0],z.invertExtent("#41b6c4")[0],z.invertExtent("#1d91c0")[0],z.invertExtent("#225ea8")[0],z.invertExtent("#253494")[0],z.invertExtent("#081d58")[0]])
+									   .enter()
+									   .append("g")
+									   .attr("class","legend")
+									   .attr("transform", function (d,i) { return "translate(" + (w-padding-360 + i*40) + "," + (h-40) + ")";});
+
+
+					legend.append("rect")
+						  .attr("width", 40)
+						  .attr("height", 20)
+						  .style("fill", z)
+
+					legend.append("text")
+						  .attr("x", 2)
+						  .attr("y", 30)
+						  .attr("dy", ".35em")
+						  .text(function(d) { return Math.round(d);});
+
+					legend.append("text")
+						  .attr("x", 0)
+						  .attr("y", -10)
+						  .attr("dy", "0.35em")
+						  .text(function(d,i) {if (i==0) { return "Number of Appearances";}})
+
+					canvas.append("g")
+					  	  .attr("class", "axis")
+					      .attr("transform", "translate(0," + (h - padding) + ")")
+					      .call(xAxis)
+					    .append("text")
+					      .attr("x",527)
+					      .attr("y", 50)
+					      .attr("class", "label")
+					      .style("font-size", "15px")
+					      .text("Episode");    	
+
+					canvas.append("g")
+						  .attr("class", "axis")
+						  .attr("transform", "translate(" + (padding) + ",0)")
+						  .call(yAxis)
+						.append("text")
+						  .attr("x",-350)
+						  .attr("y", -80)
+						  .attr("class","label")
+						  .attr("transform", "rotate(-90)")
+						  .style("font-size","15px")
+						  .text("House");
+				}
+
+			});
+
+		</script>
+	</body>
+</html>

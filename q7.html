@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<script src='../lib/d3.v3.min.js'></script>
+		<script src="../lib/d3-queue.v3.min.js"></script>
+		<script src='../lib/topojson.v1.min.js'></script>
+		<script src='../lib/d3.tip.v0.6.3.js'></script>
+	</head>
+	<style>
+
+	h1 {
+		position: absolute;
+		top: 0px;
+		left: 150px;
+		color: #f16913;
+	}
+
+	.svg {
+		position: absolute;
+		top: 40px;
+	}
+
+	</style>
+
+	<body>
+		<h1>Population of Country</h1>
+		<script>
+			var w = 1000;
+			var h = 600;
+
+			var svg = d3.select("body").append("svg").attr("class", "svg").attr("width", w).attr("height", h);
+
+			var projection = d3.geo.equirectangular();
+
+			var geoGenerator = d3.geo.path().projection(projection);
+
+
+			var x = d3.scale.linear().domain([1,10]).range([600,900]);
+
+			var color_scale;
+
+			d3.queue().defer(d3.json, "world_countries.json")
+					  .defer(d3.tsv, "literacy_rate.tsv")
+					  .defer(d3.tsv, "world_population.tsv")
+					  .await(WhenReady);
+
+			function WhenReady(error, world, literacy, population_data) {
+
+				if(error) throw error;
+
+
+				tip = d3.tip().attr("class", "d3-tip").html(function(d,i) { return "<svg width=150 height=50> <g> <rect x=0 y=0 width=150 height=50 fill=black fill-opacity = 0.7 stroke=black> </rect>" + "<text x=5 y=15 font-size=12 fill=white>Country: "+ d.properties.name +"</text>" + " <text x=5 y=30 font-size=12 fill=white>Population: "+ population_id_values[d.id] +"</text>" + "<text x=5 y=45 font-size=12 fill=white>Literacy Rate: "+ literacy_id_rates[d.id] +"</text>" + " </g> </svg>"; });
+
+				svg.call(tip)
+
+				var population_id_values = {};
+				var population_values = [];
+				
+				var literacy_id_rates = {};
+
+				population_data.forEach(function(d,i) {
+					population_id_values[population_data[i].id] = +population_data[i].population;
+					population_values.push(+population_data[i].population);
+					});
+
+				literacy.forEach(function(d,i) {
+					literacy_id_rates[literacy[i].id] = +literacy[i].Rate;
+				})
+
+				color_scale = d3.scale.quantize().domain(population_values.sort())
+
+				color_scale.range(["#fff5eb", "#fee6ce", "#fdd0a2", "#fda36b", "#fd8d3c", "#f16913", "#d94801", "#a63603", "#7f2704"]);
+
+				var countriesOnMap = svg.selectAll("path").data(world.features);
+
+				countriesOnMap.enter().append("path")
+					.attr('d', geoGenerator)
+					.style("fill", function (d) {
+						return color_scale(population_id_values[d.id]);
+					}).on('mouseover', tip.show).on('mouseout', tip.hide);
+
+				var legend = svg.selectAll(".legend")
+			   .data([color_scale.invertExtent("#fff5eb")[0],
+			   	      color_scale.invertExtent("#fee6ce")[0],
+			   	      color_scale.invertExtent("#fdd0a2")[0],
+			   	      color_scale.invertExtent("#fda36b")[0],
+			   	      color_scale.invertExtent("#fd8d3c")[0],
+			   	      color_scale.invertExtent("#f16913")[0],
+			   	      color_scale.invertExtent("#d94801")[0],
+			   	      color_scale.invertExtent("#a63603")[0],
+			   	      color_scale.invertExtent("#7f2704")[0]])
+			   .enter()
+			   .append("g")
+			   .attr("class","legend")
+			   .attr("transform", function (d,i) { return "translate(" +  (100 + i*70) + "," + (h-100 + 20) + ")";});
+
+			   var number_format = d3.format("0.3s");
+
+				legend.append("rect")
+					  .attr("width", 70)
+					  .attr("height", 10)
+					  .style("fill", color_scale)
+
+				legend.append("text")
+					  .attr("x", 2)
+					  .attr("y", 16)
+					  .attr("dy", ".35em")
+					  .text(function(d) { return number_format(d);});
+
+
+			 }
+		</script>
+
+	</body>
+</html>

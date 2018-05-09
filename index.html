@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<script src='../lib/d3.v3.min.js'></script>
+</head>
+<style>
+.node {
+  cursor: pointer;
+}
+
+.node circle {
+  fill: #fff;
+  stroke: seagreen;
+  stroke-width: 1.5px;
+}
+
+.node text {
+  font: 10px sans-serif;
+}
+
+.link {
+  fill: none;
+  stroke: #FFD700;
+  stroke-width: 1.5px;
+}
+</style>
+
+<body>
+
+<script type="text/javascript">
+
+	var w = 1000;
+	var h = 800;
+	var padding = 50;
+
+	var base;
+	var i = 0;
+	var duration = 70;
+
+	var canvas = d3.select("body").append("svg").attr("width", w).attr("height",h).append("g");
+
+	var dendrogram = d3.layout.tree().size([h, w]);
+
+	var diagonal = d3.svg.diagonal().projection(function(d) { return [d.y, d.x]; });
+
+	d3.json("sushi.json", function(error, json_data) {
+		
+		if (error) throw error;
+
+		base = json_data;
+		base.x0 = h/2;
+		base.y0 = 0;
+
+		// by default collapses all children. 
+		// when the data is read this function is called for all children of the root.
+		// by default the function displays just one layer of the tree, the root and its
+		// immidiate children.
+
+		function close(d) {
+		
+			if (d.children) {
+				d._children = d.children;
+				d._children.forEach(close);
+				d.children = null;
+			}
+		}
+
+		base.children.forEach(close);
+		update(base);
+	});
+
+	d3.select(self.frameElement).style("height", "800px");
+
+	function update(source) {
+
+		var nodes = dendrogram.nodes(base).reverse(),
+			links = dendrogram.links(nodes);
+
+		nodes.forEach(function(d) { d.y = d.depth * 200 + 120; 
+									if (d.text_fill === "blue") {
+
+									}
+									else {
+										d.text_fill = "black";
+									}
+								});
+
+		var node = canvas.selectAll("g.node").data(nodes, function(d) { return d.id || (d.id = ++i);});
+
+
+		var nodeEnter = node.enter().append("g")
+									.attr("class", "node")
+									.attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")";})
+									.on("click", click)
+									.on("mouseover", onMouseOver)
+									.on("mouseout", onMouseOut);
+									
+
+		nodeEnter.append("circle")
+				 .attr("r", 1e-6)
+				 .style("fill", function(d) {return d._children ? "lightseagreen" : "#fff"; });
+
+		
+		nodeEnter.append("text")
+				 .attr("x", function(d) { return d.children || d._children ? -10 : 10;})
+				 .attr("dy", "0.35em")
+				 .attr("text-anchor", function (d) {return d.children || d._children ? "end" : "start";})
+				 .text(function(d) { return d.data.name;})				 
+				 .style("fill-opacity", 1e-6);				 
+		
+		
+		  var nodeUpdate = node.transition()
+		      .duration(duration)
+		      .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
+
+
+		  nodeUpdate.select("circle")
+		      .attr("r", 4.5)
+		      .style("fill", function(d) { return d._children ? "lightseagreen" : "#fff"; });
+
+
+		  var text_scale = d3.scale.log().range([40,12]);
+		  text_scale.domain([1,4]);
+
+		  nodeUpdate.select("text")
+		      .style("fill-opacity", 1)
+		      .style("font-size", function(d) { return text_scale(1+((d.y - 100) / 200))  + "px"; })
+		      .style("fill", function(d) { console.log(d.text_fill); return d.text_fill;});
+		
+		  var nodeExit = node.exit().transition()
+		      .duration(duration)
+		      .attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
+		      .remove();
+
+		  nodeExit.select("circle")
+		      .attr("r", 1e-6);
+
+		  nodeExit.select("text")
+		      .style("fill-opacity", 1e-6);
+
+		
+		  var link = canvas.selectAll("path.link")
+		      .data(links, function(d) { return d.target.id; });
+
+		 
+		  link.enter().insert("path", "g")
+		      .attr("class", "link")
+		      .attr("d", function(d) {
+		        var o = {x: source.x0, y: source.y0};
+		        return diagonal({source: o, target: o});
+		      });
+
+		
+		  link.transition()
+		      .duration(duration)
+		      .attr("d", diagonal);
+
+		 
+		  link.exit().transition()
+		      .duration(duration)
+		      .attr("d", function(d) {
+		        var o = {x: source.x, y: source.y};
+		        return diagonal({source: o, target: o});
+		      })
+		      .remove();
+
+		  
+		  nodes.forEach(function(d) {
+		    d.x0 = d.x;
+		    d.y0 = d.y;
+		  });
+		}
+
+
+		function click(d) {
+		  if (d.children) {
+		    d._children = d.children;
+		    d.children = null;
+		  } else {
+		    d.children = d._children;
+		    d._children = null;
+		  }
+		  update(d);
+
+		}
+
+		function onMouseOver(d) {
+			d.text_fill = "blue";
+			
+			if (d.parent) {
+				d.parent.text_fill = "blue";
+				onMouseOver(d.parent);
+			}
+			update(d);
+		}
+
+		function onMouseOut(d) {
+			d.text_fill = "black";
+
+			if (d.parent) {
+				d.parent.text_fill = "black";
+				onMouseOut(d.parent);
+			}
+			update(d);
+		}
+
+</script>
+</body>
+</html>
